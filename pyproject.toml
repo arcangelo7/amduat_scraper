@@ -1,0 +1,18 @@
+[project]
+name = "theban-mapping-project-scraper"
+version = "0.1.0"
+description = "Web scraper for extracting Amduat (Book of the Hidden Chamber) images from the Theban Mapping Project website"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "beautifulsoup4>=4.13.5",
+    "requests>=2.32.5",
+]
+
+[project.scripts]
+amduat-scraper = "amduat_scraper:main"
+
+[dependency-groups]
+dev = [
+    "isort>=6.0.1",
+]
