@@ -1,4 +1,4 @@
-# Theban Mapping Project Scraper - Amduat Images
+# Amduat Scraper - Theban Mapping Project
 
 Web scraper for extracting Amduat (Book of the Hidden Chamber) images from the Theban Mapping Project website.
 
@@ -20,8 +20,8 @@ This project uses `uv` for dependency management.
 
 ```bash
 # Clone the repository
-git clone <repository-url>
-cd theban_mapping_progect_scraper
+git clone https://github.com/arcangelo7/amduat_scraper.git
+cd amduat_scraper
 
 # Install dependencies with uv
 uv sync
@@ -49,4 +49,6 @@ uv run amduat-scraper
 
 ## License
 
-For educational and research purposes only. All images are property of the Theban Mapping Project.
+This software is licensed under the ISC License. See the [LICENSE](LICENSE) file for details.
+
+Note: All images downloaded by this scraper are property of the Theban Mapping Project and subject to their terms of use.
