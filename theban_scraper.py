@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import argparse
 import os
 import re
 import time
@@ -9,28 +10,60 @@ from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup
 
+FUNERARY_TEXT_CONFIGS = {
+    'amduat': {
+        'name': 'Amduat',
+        'keywords': ['amduat', 'imydwat'],
+        'patterns': [
+            r'imydwat[,\s]*(\w+)\s+hour',
+            r'amduat[,\s]*(\w+)\s+hour',
+            r'(\w+)\s+hour\s+of\s+(?:the\s+)?(?:imydwat|amduat)',
+            r'hour\s+(\d+)[,\s]*(?:imydwat|amduat)'
+        ],
+        'sections': {
+            1: "prima_ora", 2: "seconda_ora", 3: "terza_ora", 4: "quarta_ora",
+            5: "quinta_ora", 6: "sesta_ora", 7: "settima_ora", 8: "ottava_ora",
+            9: "nona_ora", 10: "decima_ora", 11: "undicesima_ora", 12: "dodicesima_ora"
+        },
+        'section_mapping': {
+            'first': 1, 'second': 2, 'third': 3, 'fourth': 4, 'fifth': 5, 'sixth': 6,
+            'seventh': 7, 'eighth': 8, 'ninth': 9, 'tenth': 10, 'eleventh': 11, 'twelfth': 12,
+            '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6,
+            '7': 7, '8': 8, '9': 9, '10': 10, '11': 11, '12': 12
+        }
+    },
+    'caverns': {
+        'name': 'Book of Caverns',
+        'keywords': ['caverns', 'book of caverns'],
+        'patterns': [
+            r'(?:book\s+of\s+)?caverns[,\s]*(\w+)\s+(?:section|part|division)',
+            r'(\w+)\s+(?:section|part|division)\s+of\s+(?:the\s+)?(?:book\s+of\s+)?caverns',
+            r'(?:section|part|division)\s+(\d+)[,\s]*(?:book\s+of\s+)?caverns'
+        ],
+        'sections': {
+            1: "prima_sezione", 2: "seconda_sezione", 3: "terza_sezione", 
+            4: "quarta_sezione", 5: "quinta_sezione", 6: "sesta_sezione"
+        },
+        'section_mapping': {
+            'first': 1, 'second': 2, 'third': 3, 'fourth': 4, 'fifth': 5, 'sixth': 6,
+            '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6
+        }
+    }
+}
 
-class AmduatScraper:
-    def __init__(self):
+
+class ThebanScraper:
+    def __init__(self, text_type: str):
+        if text_type not in FUNERARY_TEXT_CONFIGS:
+            raise ValueError(f"Unknown funerary text type: {text_type}. Available: {list(FUNERARY_TEXT_CONFIGS.keys())}")
+        
+        self.text_type = text_type
+        self.config = FUNERARY_TEXT_CONFIGS[text_type]
         self.base_url = "https://thebanmappingproject.com"
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         })
-        self.amduat_hours = {
-            1: "prima_ora",
-            2: "seconda_ora", 
-            3: "terza_ora",
-            4: "quarta_ora",
-            5: "quinta_ora",
-            6: "sesta_ora",
-            7: "settima_ora",
-            8: "ottava_ora",
-            9: "nona_ora",
-            10: "decima_ora",
-            11: "undicesima_ora",
-            12: "dodicesima_ora"
-        }
         
     def get_tombs_list(self) -> List[str]:
         """Get list of all tomb URLs from the Valley of Kings"""
@@ -83,37 +116,27 @@ class AmduatScraper:
         
         return "Unknown_Tomb"
     
-    def extract_amduat_images(self, tomb_url: str) -> Dict[int, List[Tuple[str, str, str]]]:
-        """Extract Amduat/Imydwat images from a specific tomb page with captions and tomb name"""
-        images_by_hour = {i: [] for i in range(1, 13)}
+    def extract_funerary_text_images(self, tomb_url: str) -> Dict[int, List[Tuple[str, str, str]]]:
+        """Extract funerary text images from a specific tomb page with captions and tomb name"""
+        sections = self.config['sections']
+        images_by_section = {i: [] for i in sections.keys()}
         
         print(f"Analyzing tomb: {tomb_url}")
         response = self.session.get(tomb_url)
         
         if response.status_code != 200:
             print(f"Failed to access {tomb_url}")
-            return images_by_hour
+            return images_by_section
             
         soup = BeautifulSoup(response.text, 'html.parser')
         
         # Extract tomb name
         tomb_name = self.extract_tomb_name(soup, tomb_url)
         
-        # Find all mentions of Imydwat/Amduat with hour references
-        patterns = [
-            r'imydwat[,\s]*(\w+)\s+hour',
-            r'amduat[,\s]*(\w+)\s+hour',
-            r'(\w+)\s+hour\s+of\s+(?:the\s+)?(?:imydwat|amduat)',
-            r'hour\s+(\d+)[,\s]*(?:imydwat|amduat)'
-        ]
-        
-        hour_mapping = {
-            'first': 1, 'second': 2, 'third': 3, 'fourth': 4,
-            'fifth': 5, 'sixth': 6, 'seventh': 7, 'eighth': 8,
-            'ninth': 9, 'tenth': 10, 'eleventh': 11, 'twelfth': 12,
-            '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6,
-            '7': 7, '8': 8, '9': 9, '10': 10, '11': 11, '12': 12
-        }
+        # Get patterns and mappings from configuration
+        patterns = self.config['patterns']
+        section_mapping = self.config['section_mapping']
+        keywords = self.config['keywords']
         
         images = soup.find_all('img')
         
@@ -152,45 +175,45 @@ class AmduatScraper:
                         context_text = parent.get_text(strip=True)
                     parent = parent.parent
             
-            # Try to identify which hour this image belongs to
-            hour_found = None
+            # Try to identify which section this image belongs to
+            section_found = None
             matching_text = ""
             for pattern in patterns:
                 matches = re.findall(pattern, img_context)
                 for match in matches:
-                    if match.lower() in hour_mapping:
-                        hour_found = hour_mapping[match.lower()]
+                    if match.lower() in section_mapping:
+                        section_found = section_mapping[match.lower()]
                         # Extract the sentence/phrase containing the keyword
                         sentences = re.split(r'[.;!?\n]', context_text)
                         for sentence in sentences:
-                            if 'amduat' in sentence.lower() or 'imydwat' in sentence.lower():
+                            if any(keyword in sentence.lower() for keyword in keywords):
                                 matching_text = sentence.strip()
                                 break
                         if not matching_text:
                             # If no sentence found, use a portion of context containing keywords
                             words = context_text.split()
                             for i, word in enumerate(words):
-                                if 'amduat' in word.lower() or 'imydwat' in word.lower():
+                                if any(keyword in word.lower() for keyword in keywords):
                                     start = max(0, i-5)
                                     end = min(len(words), i+10)
                                     matching_text = ' '.join(words[start:end])
                                     break
                         break
-                if hour_found:
+                if section_found:
                     break
             
-            # If we found an hour association, add the image with the matching text as caption
-            if hour_found and 1 <= hour_found <= 12:
-                img_exists = any(url == img_url for url, _, _ in images_by_hour[hour_found])
+            # If we found a section association, add the image with the matching text as caption
+            if section_found and section_found in sections:
+                img_exists = any(url == img_url for url, _, _ in images_by_section[section_found])
                 if not img_exists:
                     # Use the text that matched our pattern as caption, fallback to alt/title
                     caption = matching_text or img.get('alt') or img.get('title') or ""
-                    images_by_hour[hour_found].append((img_url, caption, tomb_name))
-                    print(f"  Found image for hour {hour_found}: {os.path.basename(img_url)}")
+                    images_by_section[section_found].append((img_url, caption, tomb_name))
+                    print(f"  Found image for section {section_found}: {os.path.basename(img_url)}")
                     if caption:
                         print(f"    Caption: {caption[:100]}...")
         
-        return images_by_hour
+        return images_by_section
     
     def download_image(self, url: str, filepath: str) -> bool:
         """Download an image from URL to filepath"""
@@ -207,20 +230,20 @@ class AmduatScraper:
     
     def create_folder_structure(self):
         """Create the folder structure for organizing images"""
-        base_dir = "amduat"
+        base_dir = self.text_type
         
         os.makedirs(base_dir, exist_ok=True)
         
-        for _, hour_name in self.amduat_hours.items():
-            hour_dir = os.path.join(base_dir, hour_name)
-            os.makedirs(hour_dir, exist_ok=True)
+        for _, section_name in self.config['sections'].items():
+            section_dir = os.path.join(base_dir, section_name)
+            os.makedirs(section_dir, exist_ok=True)
         
         print(f"Created folder structure in '{base_dir}' directory")
         return base_dir
     
     def scrape_all_tombs(self):
         """Main function to scrape all tombs and organize images"""
-        print("Starting Amduat scraper...")
+        print(f"Starting {self.config['name']} scraper...")
         
         base_dir = self.create_folder_structure()
         
@@ -228,15 +251,16 @@ class AmduatScraper:
         tomb_urls = self.get_tombs_list()
         print(f"Found {len(tomb_urls)} tombs")
         
-        all_images = {i: {} for i in range(1, 13)}
+        sections = self.config['sections']
+        all_images = {i: {} for i in sections.keys()}
         
         for tomb_url in tomb_urls:
-            images_by_hour = self.extract_amduat_images(tomb_url)
+            images_by_section = self.extract_funerary_text_images(tomb_url)
             
-            for hour, img_data in images_by_hour.items():
+            for section, img_data in images_by_section.items():
                 for img_url, caption, tomb_name in img_data:
-                    if img_url not in all_images[hour]:
-                        all_images[hour][img_url] = (caption, tomb_name)
+                    if img_url not in all_images[section]:
+                        all_images[section][img_url] = (caption, tomb_name)
             
             # Be polite to the server
             time.sleep(1)
@@ -244,12 +268,12 @@ class AmduatScraper:
         print("\nDownloading images...")
         total_downloaded = 0
         
-        for hour_num, img_dict in all_images.items():
+        for section_num, img_dict in all_images.items():
             if not img_dict:
                 continue
                 
-            hour_dir = os.path.join(base_dir, self.amduat_hours[hour_num])
-            print(f"\nHour {hour_num} ({self.amduat_hours[hour_num]}): {len(img_dict)} images")
+            section_dir = os.path.join(base_dir, sections[section_num])
+            print(f"\nSection {section_num} ({sections[section_num]}): {len(img_dict)} images")
             
             for idx, (img_url, (caption, tomb_name)) in enumerate(img_dict.items(), 1):
                 tomb_id = re.search(r'/kv-(\d+)', img_url)
@@ -271,7 +295,7 @@ class AmduatScraper:
                     else:
                         filename = f"{tomb_id_prefix}{sanitized_tomb_name}_image_{idx}{extension}"
                 
-                filepath = os.path.join(hour_dir, filename)
+                filepath = os.path.join(section_dir, filename)
                 
                 if self.download_image(img_url, filepath):
                     print(f"  Downloaded: {os.path.basename(filepath)}")
@@ -282,9 +306,18 @@ class AmduatScraper:
         print(f"\nScraping complete! Downloaded {total_downloaded} images")
         print(f"Images organized in '{base_dir}' directory")
 
-def main():
-    scraper = AmduatScraper()
+
+def main():    
+    parser = argparse.ArgumentParser(description='Scrape funerary text images from the Theban Mapping Project')
+    parser.add_argument('text_type', 
+                       choices=list(FUNERARY_TEXT_CONFIGS.keys()),
+                       help='Type of funerary text to scrape')
+    
+    args = parser.parse_args()
+    
+    scraper = ThebanScraper(text_type=args.text_type)
     scraper.scrape_all_tombs()
+
 
 if __name__ == "__main__":
     main()

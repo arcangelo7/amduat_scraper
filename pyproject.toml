@@ -1,7 +1,7 @@
 [project]
-name = "amduat-scraper"
-version = "0.1.0"
-description = "Web scraper for extracting Amduat (Book of the Hidden Chamber) images from the Theban Mapping Project website"
+name = "theban-scraper"
+version = "0.2.0"
+description = "Web scraper for extracting funerary text images (Amduat, Book of Caverns, etc.) from the Theban Mapping Project website"
 readme = "README.md"
 license = {text = "ISC"}
 requires-python = ">=3.12"
@@ -11,7 +11,7 @@ dependencies = [
 ]
 
 [project.scripts]
-amduat-scraper = "amduat_scraper:main"
+theban-scraper = "theban_scraper:main"
 
 [dependency-groups]
 dev = [

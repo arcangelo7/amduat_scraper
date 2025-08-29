@@ -1,16 +1,21 @@
-# Amduat Scraper - Theban Mapping Project
+# Theban Scraper - Theban Mapping Project
 
-Web scraper for extracting Amduat (Book of the Hidden Chamber) images from the Theban Mapping Project website.
+Web scraper for extracting funerary text images from the Theban Mapping Project website.
 
 ## Description
 
-This project scrapes the Theban Mapping Project website to collect images of the Amduat, an ancient Egyptian funerary text that describes the journey of the sun god Ra through the twelve hours of the night. The scraper organizes images by each of the twelve hours, downloading them in the highest available resolution.
+This project scrapes the Theban Mapping Project website to collect images of ancient Egyptian funerary texts. Currently supports:
+
+- **Amduat** (Book of the Hidden Chamber): Describes the sun god Ra's journey through the twelve hours of the night
+- **Book of Caverns**: Another ancient Egyptian funerary text describing the underworld journey
+
+The scraper organizes images by their respective sections (hours for Amduat, sections for Book of Caverns), downloading them in the highest available resolution.
 
 ## Features
 
 - Automatically discovers all tombs in the Valley of the Kings
-- Identifies and extracts Amduat/Imydwat images from tomb documentation
-- Organizes images by the twelve hours of the night
+- Identifies and extracts funerary text images from tomb documentation
+- Organizes images by their respective sections (hours, divisions, etc.)
 - Downloads images in original high resolution
 - Creates structured folder hierarchy for easy navigation
 
@@ -20,8 +25,8 @@ This project uses `uv` for dependency management.
 
 ```bash
 # Clone the repository
-git clone https://github.com/arcangelo7/amduat_scraper.git
-cd amduat_scraper
+git clone https://github.com/arcangelo7/theban_scraper.git
+cd theban_scraper
 
 # Install dependencies with uv
 uv sync
@@ -29,23 +34,15 @@ uv sync
 
 ## Usage
 
-Run the scraper using:
+Run the scraper specifying the funerary text type:
 
 ```bash
-uv run python amduat_scraper.py
+# Scrape Amduat images
+uv run python theban_scraper.py amduat
+
+# Scrape Book of Caverns images
+uv run python theban_scraper.py caverns
 ```
-
-Or use the installed script:
-
-```bash
-uv run amduat-scraper
-```
-
-## Notes
-
-- The scraper includes delays between requests to be respectful to the server
-- Images are downloaded only once (no duplicates across different tombs)
-- The scraper identifies Amduat content through text analysis of the tomb descriptions
 
 ## License
 
